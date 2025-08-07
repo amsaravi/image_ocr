@@ -18,7 +18,7 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def process_image_with_ollama(image_path, prim_ocr_txt):
+def process_image_with_ollama(image_path):
     """Process image using Ollama chat API with LLaVA model"""
     # Encode the image to base64
     encoded_image = encode_image(image_path)
@@ -27,7 +27,7 @@ def process_image_with_ollama(image_path, prim_ocr_txt):
     payload = {
         "model": "Gemma3-27b-q5-vision:latest",
         "role": "user",
-        "prompt": f"OCR text in this image. dont translate. this is the OCR of the image created by tesseract (use it for improving the results):\n\n {prim_ocr_txt}",
+        "prompt": "OCR text in this image. dont translate",
         "images": [encoded_image],
         "stream": False
     }   
@@ -63,7 +63,7 @@ def main(folder_path, output_folder):
         tesseract_text = process_image_with_tesseract(image_path)
         
         # Process with Ollama
-        ollama_text = process_image_with_ollama(image_path, tesseract_text)
+        ollama_text = process_image_with_ollama(image_path)
         
         # Generate output file names (same as image name but .txt extension)
         base_name = os.path.splitext(image_file)[0]
@@ -78,8 +78,8 @@ def main(folder_path, output_folder):
             ollama_file.write(ollama_text)
         
         # Collect results for aggregation
-        all_tesseract_results.append(f"--- {image_file} ---\n{tesseract_text}\n")
-        all_ollama_results.append(f"--- {image_file} ---\n{ollama_text}\n")
+        all_tesseract_results.append(f"{tesseract_text}\n")
+        all_ollama_results.append(f"{ollama_text}\n")
     
     # Save aggregated results
     with open(os.path.join(output_folder, "all_tesseract_results.txt"), 'w') as agg_file:

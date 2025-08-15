@@ -18,31 +18,46 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def process_image_with_ollama(image_path):
-    """Process image using Ollama chat API with LLaVA model"""
+def process_image_with_lmstudio(image_path):
+    """Process image using LMStudio OpenAI-compatible API with LLaVA model"""
     # Encode the image to base64
     encoded_image = encode_image(image_path)
     
-    # Prepare the request payload
+    # Prepare the request payload for OpenAI-compatible API
     payload = {
-        "model": "Gemma3-27b-q5-vision:latest",
-        "role": "user",
-        "prompt": "OCR text in this image. dont translate. dont add any extra text.",
-        "images": [encoded_image],
+        "model": "gemma-3-27b-it-k-latest",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "OCR text in this image. dont translate. dont add any extra text."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{encoded_image}"
+                        }
+                    }
+                ]
+            }
+        ],
         "stream": False
     }   
+    
     try:
-        # Send request to Ollama API
-        response = requests.post('http://localhost:11434/api/generate', json=payload)
+        # Send request to LMStudio API (OpenAI-compatible endpoint)
+        response = requests.post('http://localhost:1234/v1/chat/completions', json=payload)
         response.raise_for_status()
         
         # Extract the response text from JSON
         result = response.json()
-        return result.get('response', '')
+        return result['choices'][0]['message']['content']
     except requests.exceptions.RequestException as e:
-        return f"Error processing image with Ollama: {str(e)}"
+        return f"Error processing image with LMStudio: {str(e)}"
     except KeyError as e:
-        return f"Error parsing Ollama response: {str(e)}"
+        return f"Error parsing LMStudio response: {str(e)}"
 
 def main(folder_path, output_folder):
     # Create output folder if it doesn't exist
@@ -53,7 +68,7 @@ def main(folder_path, output_folder):
     
     # Collect all results for aggregation
     all_tesseract_results = []
-    all_ollama_results = []
+    all_lmstudio_results = []
     
     # Process files with progress bar
     for image_file in tqdm(image_files, desc="Processing images"):
@@ -62,35 +77,35 @@ def main(folder_path, output_folder):
         # Process with Tesseract
         tesseract_text = process_image_with_tesseract(image_path)
         
-        # Process with Ollama
-        ollama_text = process_image_with_ollama(image_path)
+        # Process with LMStudio
+        lmstudio_text = process_image_with_lmstudio(image_path)
         
         # Generate output file names (same as image name but .txt extension)
         base_name = os.path.splitext(image_file)[0]
         tesseract_output_file = os.path.join(output_folder, f"{base_name}_tesseract.txt")
-        ollama_output_file = os.path.join(output_folder, f"{base_name}_ollama.txt")
+        lmstudio_output_file = os.path.join(output_folder, f"{base_name}_lmstudio.txt")
         
         # Save results to individual text files
         with open(tesseract_output_file, 'w') as tes_file:
             tes_file.write(tesseract_text)
             
-        with open(ollama_output_file, 'w') as ollama_file:
-            ollama_file.write(ollama_text)
+        with open(lmstudio_output_file, 'w') as lmstudio_file:
+            lmstudio_file.write(lmstudio_text)
         
         # Collect results for aggregation
         all_tesseract_results.append(f"--- {image_file} ---\n{tesseract_text}\n")
-        all_ollama_results.append(f"--- {image_file} ---\n{ollama_text}\n")
+        all_lmstudio_results.append(f"--- {image_file} ---\n{lmstudio_text}\n")
     
     # Save aggregated results
     with open(os.path.join(output_folder, "all_tesseract_results.txt"), 'w') as agg_file:
         agg_file.write('\n'.join(all_tesseract_results))
         
-    with open(os.path.join(output_folder, "all_ollama_results.txt"), 'w') as agg_file:
-        agg_file.write('\n'.join(all_ollama_results))
+    with open(os.path.join(output_folder, "all_lmstudio_results.txt"), 'w') as agg_file:
+        agg_file.write('\n'.join(all_lmstudio_results))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process images and save OCR results')
-    parser.add_argument('-i', '--input',required=True, help='Path to the folder containing images')
+    parser.add_argument('-i', '--input', required=True, help='Path to the folder containing images')
     parser.add_argument('-o', '--output', required=True, help='Output folder path for text files')
     
     args = parser.parse_args()

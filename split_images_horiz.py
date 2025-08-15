@@ -1,21 +1,21 @@
 import os
 from PIL import Image
 
-def split_image_horizontally(image_path, output_dir):
+def split_image_vertically_with_overlap(image_path, output_dir, overlap=20):
     try:
         img = Image.open(image_path)
         width, height = img.size
         
-        # Calculate the midpoint for horizontal split
-        midpoint = width // 2
-        # height = 2200
-        # Define the bounding boxes for the two halves
-        left_half_box = (0, 230, midpoint, height)
-        right_half_box = (midpoint, 230, width, height)
+        # Calculate midpoint for vertical (top/bottom) split
+        midpoint = height // 2
+        
+        # Add overlap
+        top_half_box = (0, 0, width, midpoint + overlap)
+        bottom_half_box = (0, midpoint - overlap, width, height)
         
         # Crop the image into two halves
-        left_half = img.crop(left_half_box)
-        right_half = img.crop(right_half_box)
+        top_half = img.crop(top_half_box)
+        bottom_half = img.crop(bottom_half_box)
         
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -25,19 +25,19 @@ def split_image_horizontally(image_path, output_dir):
         name, ext = os.path.splitext(base_name)
         
         # Save the two halves
-        left_half_path = os.path.join(output_dir, f"{name}_part2{ext}")
-        right_half_path = os.path.join(output_dir, f"{name}_part1{ext}")
+        top_half_path = os.path.join(output_dir, f"{name}_part1{ext}")
+        bottom_half_path = os.path.join(output_dir, f"{name}_part2{ext}")
         
-        left_half.save(left_half_path)
-        right_half.save(right_half_path)
+        top_half.save(top_half_path)
+        bottom_half.save(bottom_half_path)
         
-        print(f"Successfully split '{base_name}' into '{os.path.basename(left_half_path)}' and '{os.path.basename(right_half_path)}'")
+        print(f"Successfully split '{base_name}' into '{os.path.basename(top_half_path)}' and '{os.path.basename(bottom_half_path)}'")
         return True
     except Exception as e:
         print(f"Error processing '{image_path}': {e}")
         return False
 
-def process_images_in_directory(input_dir, output_dir):
+def process_images_in_directory(input_dir, output_dir, overlap=20):
     if not os.path.exists(input_dir):
         print(f"Input directory '{input_dir}' does not exist.")
         return
@@ -49,9 +49,8 @@ def process_images_in_directory(input_dir, output_dir):
     for filename in os.listdir(input_dir):
         file_path = os.path.join(input_dir, filename)
         if os.path.isfile(file_path):
-            # Check if it's a common image file type
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff')):
-                if split_image_horizontally(file_path, output_dir):
+                if split_image_vertically_with_overlap(file_path, output_dir, overlap):
                     processed_count += 1
                 else:
                     failed_count += 1
@@ -67,10 +66,11 @@ def process_images_in_directory(input_dir, output_dir):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Horizontally split image files into two halves.")
+    parser = argparse.ArgumentParser(description="Vertically split images (top/bottom) with overlap.")
     parser.add_argument("-i", "--input_directory", required=True, help="Path to the directory containing the original image files.")
     parser.add_argument("-o", "--output_directory", required=True, help="Path to the directory where the split image files will be saved.")
+    parser.add_argument("--overlap", type=int, default=20, help="Pixel overlap between the two halves (default: 20).")
     
     args = parser.parse_args()
     
-    process_images_in_directory(args.input_directory, args.output_directory)
+    process_images_in_directory(args.input_directory, args.output_directory, args.overlap)

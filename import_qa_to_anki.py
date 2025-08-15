@@ -11,8 +11,7 @@ def create_model_if_not_exists(col, model_name):
         model = mm.new(model_name)
         
         # Add fields
-        fields = ["Question", "Options", "Answer", "CorrectAnswer", "Year", 
-                 "Resource", "Question_No", "Question_File", "Answer_File"]
+        fields = ["Question", "Answer", "CorrectAnswer", "Question_No", "Image_Name", "Answer_Image", "AI_Opinion"]
         for field_name in fields:
             field = mm.new_field(field_name)
             mm.add_field(model, field)
@@ -23,9 +22,7 @@ def create_model_if_not_exists(col, model_name):
             <div style="direction: rtl; text-align: right;">
                 <div class="question">{{Question}}</div>
                 <br>
-                <div class="options">{{Options}}</div>
-                <br>
-                <small>Question File: {{Question_File}}</small>
+                <small>Image Name: {{Image_Name}}</small>
             </div>
         """
         template['afmt'] = """
@@ -37,10 +34,9 @@ def create_model_if_not_exists(col, model_name):
                 <div class="answer">{{Answer}}</div>
                 <br>
                 <div class="metadata">
-                    سال: {{Year}}<br>
-                    منبع: {{Resource}}<br>
                     شماره سوال: {{Question_No}}<br>
-                    فایل پاسخ: {{Answer_File}}
+                    تصویر پاسخ: {{Answer_Image}}<br>
+                    نظر هوش مصنوعی: {{AI_Opinion}}
                 </div>
             </div>
         """
@@ -72,66 +68,53 @@ def create_model_if_not_exists(col, model_name):
     
     return col.models.by_name(model_name)
 
-def format_options(q_dict):
-    """Format options as HTML list"""
-    options = []
-    for i in range(1, 5):
-        opt_key = f"option{i}"
-        if opt_key in q_dict and q_dict[opt_key]:
-            options.append(q_dict[opt_key])
-    return "<br>".join(options)
-
 def main():
     # Read JSON files
-    with open('physiology_Q.json', 'r', encoding='utf-8') as f:
-        questions = json.load(f)
+    with open('ocr/chapter2.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
     
-    with open('physiology_A.json', 'r', encoding='utf-8') as f:
-        answers = json.load(f)
-    
-    # Create answers dictionary
-    answers_dict = {str(a.get('AnswerNO')): {
-        'answerdetails': a.get('answerdetails', ''),
-        'CorrectAnswer': a.get('CorrectAnswer', ''),
-        'file_name': a.get('file_name', '')
-    } for a in answers if 'AnswerNO' in a}
-    
-    # Get deck name from file name
-    deck_name = os.path.splitext(os.path.basename('physiology_Q.json'))[0]
+    # Get deck name
+    deck_name = "Medical Questions"
     
     # Open Anki collection
-    col_path = os.path.expanduser("~/.local/share/Anki2/User 1/collection.anki2")
+    if os.name == 'nt': # Windows
+        col_path = os.path.join(os.getenv('APPDATA'), 'Anki2', 'User 1', 'collection.anki2')
+    else: # Linux/macOS
+        col_path = os.path.expanduser("~/.local/share/Anki2/User 1/collection.anki2")
     col = Collection(col_path)
     
     # Create deck if it doesn't exist
     did = col.decks.id(deck_name)
     
     # Create note type if it doesn't exist
-    model = create_model_if_not_exists(col, "Q_A_mama")
+    model = create_model_if_not_exists(col, "Medical Q&A")
     
     # Add notes
-    for q in questions:
-        if 'q_no' not in q:
-            continue
+    for chapter in data.get('chapters', []):
+        chapter_name = chapter.get('chapter_name', 'Unknown Chapter')
+        for q in chapter.get('questions', []):
+            note = Note(col, model)
             
-        note = Note(col, model)
-        
-        # Get answer data
-        answer_data = answers_dict.get(q['q_no'], {})
-        "fds".replace(".pdf","")
-        # Fill note fields
-        note['Question'] = q.get('question', '')
-        note['Options'] = format_options(q)
-        note['Answer'] = answer_data.get('answerdetails', '')
-        note['CorrectAnswer'] = answer_data.get('CorrectAnswer', '')
-        note['Year'] = q.get('year', '')
-        note['Resource'] = q.get('resource', '')
-        note['Question_No'] = q.get('q_no', '')
-        note['Question_File'] = f"___{q.get('file_name', '').replace('.jpg','')}____"
-        note['Answer_File'] = f"___{answer_data.get('file_name', '').replace('.jpg','')}____"
-        
-        # Add note to deck with explicit deck_id
-        col.add_note(note, did)
+            # Fill note fields
+            note['Question'] = q.get('Q_main', '')
+            note['Answer'] = q.get('Answer', '')
+            note['CorrectAnswer'] = q.get('correct_answer', '')
+            note['Question_No'] = q.get('question_no', '')
+            note['Image_Name'] = q.get('image_name', '').replace('.jpg', '.pdf')
+            note['Answer_Image'] = ", ".join([img.replace('.jpg', '.pdf') for img in q.get('answer_image', [])]) # Join list of image names
+            
+            ai_opinion = q.get('AI-opinion', {})
+            ai_opinion_text = []
+            if ai_opinion.get('question'):
+                ai_opinion_text.append(f"Question: {ai_opinion['question']}")
+            if ai_opinion.get('answer'):
+                ai_opinion_text.append(f"Answer: {ai_opinion['answer']}")
+            if ai_opinion.get('correct_answer'):
+                ai_opinion_text.append(f"Correct Answer: {ai_opinion['correct_answer']}")
+            note['AI_Opinion'] = "<br>".join(ai_opinion_text)
+            
+            # Add note to deck with explicit deck_id
+            col.add_note(note, did)
     
     # Close collection
     col.close()

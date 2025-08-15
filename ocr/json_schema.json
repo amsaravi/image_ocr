@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema for Medical Questions Book",
+  "description": "ساختار داده برای سوالات استخراج شده از کتاب پزشکی، فصل‌بندی شده.",
+  "type": "object",
+  "properties": {
+    "chapters": {
+      "description": "لیستی از تمام فصول کتاب.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chapter_name": {
+            "description": "نام و عنوان فصل.",
+            "type": "string"
+          },
+          "questions": {
+            "description": "لیست سوالات مربوط به این فصل.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question_no": {
+                  "description": "شماره سوال همانطور که در متن آمده است.",
+                  "type": "string"
+                },
+                "Q_main": {
+                  "description": "متن کامل سوال به همراه تمام گزینه‌ها (الف، ب، ج، د).",
+                  "type": "string"
+                },
+                "Answer": {
+                  "description": "توضیح تشریحی پاسخ که از بخش پاسخنامه استخراج شده است.",
+                  "type": "string"
+                },
+                "image_name": {
+                  "description": "نام فایل تصویری که سوال از آن استخراج شده است.",
+                  "type": "string"
+                },
+                "answer_image": {
+                  "description": "آرایه‌ای از نام تصاویر که پاسخ تشریحی از آنها استخراج شده است (چون ممکن است پاسخ در چند صفحه باشد).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "correct_answer": {
+                  "description": "گزینه صحیح سوال (مثلاً 'الف'، 'ب' و غیره).",
+                  "type": "string"
+                },
+                "AI-opinion": {
+                  "description": "نظرات هوش مصنوعی در مورد تناقضات بین فایل‌ها یا ابهامات موجود در سوال و پاسخ.",
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "type": "string"
+                    },
+                    "answer": {
+                      "type": "string"
+                    },
+                    "correct_answer": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "question_no",
+                "Q_main",
+                "Answer",
+                "image_name",
+                "answer_image",
+                "correct_answer",
+                "AI-opinion"
+              ]
+            }
+          }
+        },
+        "required": [
+          "chapter_name",
+          "questions"
+        ]
+      }
+    }
+  },
+  "required": [
+    "chapters"
+  ]
+}

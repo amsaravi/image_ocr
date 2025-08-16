@@ -100,8 +100,8 @@ def main():
             note['Answer'] = q.get('Answer', '')
             note['CorrectAnswer'] = q.get('correct_answer', '')
             note['Question_No'] = q.get('question_no', '')
-            note['Image_Name'] = q.get('image_name', '').replace('.jpg', '.pdf')
-            note['Answer_Image'] = ", ".join([img.replace('.jpg', '.pdf') for img in q.get('answer_image', [])]) # Join list of image names
+            note['Image_Name'] = f"___{q.get('image_name', '').replace('.jpg','').replace('.pdf','')}____"
+            note['Answer_Image'] = ", ".join([f"___{img.replace('.jpg','')}____" for img in q.get('answer_image', [])])
             
             ai_opinion = q.get('AI-opinion', {})
             ai_opinion_text = []

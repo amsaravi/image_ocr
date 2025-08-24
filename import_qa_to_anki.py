@@ -3,6 +3,7 @@ from anki.notes import Note
 import json
 import os
 import re
+import argparse
 
 def create_model_if_not_exists(col, model_name):
     """Create note type if it doesn't exist"""
@@ -69,8 +70,12 @@ def create_model_if_not_exists(col, model_name):
     return col.models.by_name(model_name)
 
 def main():
+    parser = argparse.ArgumentParser(description="Import QA data from a JSON file to Anki.")
+    parser.add_argument('json_file', type=str, help="Path to the JSON file containing QA data.")
+    args = parser.parse_args()
+
     # Read JSON files
-    with open('ocr/chapter2.json', 'r', encoding='utf-8') as f:
+    with open(args.json_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     # Get deck name
